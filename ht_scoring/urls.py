@@ -1,11 +1,16 @@
 from django.conf.urls import patterns, include, url
-from ht_scoring.scoring.views import competition_pages
+import SkeletalDisplay.urls
+import ht_scoring.scoring.views as s_views
 
 from django.contrib import admin
 admin.autodiscover()
 
-urlpatterns = patterns('',
-    url(r'^$', 'ht_scoring.scoring.views.index'),
+urlpatterns = SkeletalDisplay.urls.urlpatterns
+urlpatterns += patterns('',
+    url(r'^$', s_views.Index.as_view(), name='index'),
+    url(r'^comp/(?P<comp>\d+)$', s_views.CompetitionDisplay.as_view(), name='comp_display'),
+    url(r'^completeness/(?P<comp>\d+)$', s_views.CompletenessDisplay.as_view(), name='completeness'),
+    url(r'^faults/(?P<comp>\d+)$', s_views.Faults.as_view(), name='faults'),
 
     # Uncomment the admin/doc line below to enable admin documentation:
     url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
@@ -14,7 +19,7 @@ urlpatterns = patterns('',
     url(r'^admin/', include(admin.site.urls)),
 )
 
-for page in competition_pages:
-	urlpatterns += patterns('ht_scoring.scoring.views',
-    url(r'^' + page['page'] + r'/submit', page['page'] + '_submit'),
-    url(r'^' + page['page'] + r'/', page['page']))
+# for page in s_views.competition_pages:
+# 	urlpatterns += patterns('ht_scoring.scoring.views',
+#     url(r'^' + page['page'] + r'/submit', page['page'] + '_submit'),
+#     url(r'^' + page['page'] + r'/', page['page']))

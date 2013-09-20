@@ -1,5 +1,6 @@
 # Django settings for ht_scoring project.
 import os, sys
+import local_settings
 SITE_ROOT = os.path.dirname(os.path.realpath(__file__))
 ON_SERVER = 'linux' in sys.platform.lower()
 DEBUG = True
@@ -25,6 +26,7 @@ DATABASES = {
 # See https://docs.djangoproject.com/en/1.5/ref/settings/#allowed-hosts
 ALLOWED_HOSTS = []
 
+SECRET_KEY = local_settings.SECRET_KEY
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # although not all choices may be available on all operating systems.
@@ -66,9 +68,6 @@ STATICFILES_FINDERS = (
 #    'django.contrib.staticfiles.finders.DefaultStorageFinder',
 )
 
-# Make this unique, and don't share it with anybody.
-SECRET_KEY = open('secret_key','r').read()
-
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (
     'django.template.loaders.filesystem.Loader',
@@ -86,11 +85,24 @@ MIDDLEWARE_CLASSES = (
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
 
+TEMPLATE_CONTEXT_PROCESSORS =(
+    "django.contrib.auth.context_processors.auth",
+    "django.core.context_processors.debug",
+    "django.core.context_processors.i18n",
+    "django.core.context_processors.media",
+    "django.core.context_processors.static",
+    "django.core.context_processors.tz",
+    "django.contrib.messages.context_processors.messages",
+    'django.core.context_processors.request')
+
+
 ROOT_URLCONF = 'ht_scoring.urls'
 
 WSGI_APPLICATION = 'ht_scoring.wsgi.application'
 
-TEMPLATE_DIRS = (os.path.join(SITE_ROOT, 'templates'))
+TEMPLATE_DIRS = (os.path.join(SITE_ROOT, 'ht_scoring/templates'),
+                 os.path.join(SITE_ROOT, 'HotDjango/templates'),
+                 os.path.join(SITE_ROOT, 'SkeletalDisplay/templates'))
 
 INSTALLED_APPS = (
     'django.contrib.auth',
@@ -101,6 +113,10 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'django.contrib.admin',
     'django.contrib.admindocs',
+    'django_tables2',
+    'bootstrap3',
+    'HotDjango',
+    'SkeletalDisplay',
     'ht_scoring.scoring',
     'south',
 )
@@ -133,3 +149,15 @@ LOGGING = {
         },
     }
 }
+
+CUSTOM_DATE_FORMAT = '%Y-%m-%d'
+CUSTOM_DT_FORMAT = '%Y-%m-%d %H:%M:%S %Z'
+CUSTOM_SHORT_DT_FORMAT = '%y-%m-%d_%H %M'
+DATETIME_FORMAT = 'Y-m-d H:i:s'
+SHORT_DATETIME_FORMAT = DATETIME_FORMAT
+
+DISPLAY_APPS = ['ht_scoring.scoring']
+SITE_TITLE = 'HT scoring'
+TOP_MENU = [{'url': 'display_index', 'name': 'Data'}]
+LOGIN_REDIRECT_URL = '/'
+INTERNAL_IPS = ('127.0.0.1',)

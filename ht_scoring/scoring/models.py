@@ -71,22 +71,28 @@ class Competitor(models.Model):
 	group = models.ForeignKey(Group, blank=True, null=True, related_name='members')
 	group.help_text = 'Eg. Pony Club'
 	comment = models.TextField(max_length=1000, blank=True, null=True)
+	
 	def name(self):
 		return self.first_name + ' ' + self.last_name
+	
 	def total_rounds(self):
 		return len(self.rounds.all())
+	
 	def get_group(self):
 		if self.group:
 			return self.group.name
 		else:
 			return '-'
+		
 	def __unicode__(self):
 		group = ''
 		if self.group:
 			group = ' (' + self.group.name + ')'
 		return str(self.number) + ': ' + self.name() + ' on ' + self.horse + group + ', in ' + str(self.total_rounds()) + ' classes.'
+	
 	def num_name(self):
 		return 'no. ' + str(self.number) + ': ' + self.name()
+	
 	class Meta:
 		ordering = ['number']
 
