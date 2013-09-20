@@ -1,0 +1,22 @@
+<div class="collection">
+<a href="/admin"><button >Admin</button></a>
+</div>
+<div class="collection">
+<p>
+Competition: <br \>
+<!--<select id='competition'>
+    <option value="none"></option>
+    {% for comp in competitions %}
+        <option value="{{comp.id}}">{{comp.name}}</option>
+    {% endfor %}
+</select>-->
+{% for comp in competitions %}
+    <input type="radio" name="competition" value="{{comp.id}}" id="cls{{comp.id}}"/ ><label for="cls{{comp.id}}">{{comp.name}}</label>
+{% endfor %}
+</p>
+<p>
+{% for page in pages %}
+	<button onClick="click_send('{{page.page}}')">{{page.name}}</button>
+{% endfor %}
+</p>
+</div>

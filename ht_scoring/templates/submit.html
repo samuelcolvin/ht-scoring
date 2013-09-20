@@ -1,0 +1,14 @@
+<div id="redirect_msg"></div>
+<!--<button onclick="stop()">Stay on this Page</button>-->
+<button onclick="parent.location='/'">Home</button>
+<button onclick="history.back()">Back</button>
+<div class="collection errors">
+    {% for error in errors %}
+        <p><strong>Error:</strong> {{error}} </p>
+    {% endfor %}
+</div>
+<div class="collection comments">
+    {% for comment in comments %}
+        <p> {{comment}} </p>
+    {% endfor %}
+</div>

@@ -1,0 +1,50 @@
+<h2>{{competition_name}}</h2>
+<a href="/"><button>Home</button></a>
+<button onclick="history.back()">Back</button>
+<div class="collection details" align="left">
+<p><strong>{{fences}}</strong> Fences,</p>
+<p><strong>{{entries}}</strong> Entries,</p>
+<p>Optimum time <strong>{{optimum_time}}</strong>.</p>
+</div>
+<div class="collection">
+<table class="completeness_table" align="center">
+	<thead>
+	<td>Competitor</td>
+	{% for fence in fence_list %}
+	<td>Fence {{fence}}</td>
+	{% endfor %}
+	<td class="no_top_bottom"></td>
+	<td>Time Start</td>
+	<td>Time Finish</td>
+	<td>Time</td>
+	<td>Time Error</td>
+	<td>Total</td>
+	<td>Place</td>
+	</thead>
+	{% for round in rounds %}
+	<tr>
+		<td>{{round.competitor}}</td>
+	{% for fence_no, fence in round.fences.items %}
+		<td class="{{fence.state}}">
+			{{fence.faults}}
+		</td>
+	{% endfor %}
+		<td class="no_top_bottom"></td>
+		<td class="{% if round.time_start == '' %}empty{% else %}clear{% endif %}">
+			{{round.time_start}}
+		</td>
+		<td class="{% if round.time_finish == '' %}empty{% else %}clear{% endif %}">
+			{{round.time_finish}}
+		</td>
+		<td class="{% if round.time == '' %}empty{% else %}clear{% endif %}">
+			{{round.time}}
+		</td>
+		<td class="{% if round.time_diff == '' %}empty{% else %}clear{% endif %}">
+			{{round.time_diff}}
+		</td>
+		<td>{{round.status}}</td>
+		<td>{{round.place}}</td>
+	</tr>
+	{% endfor %}
+</table>
+</div>

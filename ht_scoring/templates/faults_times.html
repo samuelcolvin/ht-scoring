@@ -1,0 +1,36 @@
+<h2>{{competition_name}}</h2>
+<a href="/"><button>Home</button></a>
+<button onclick="history.back()">Back</button>
+<div class="collection">
+<form id="table_form" action="submit" method="post">
+<input type="hidden" name="competition" value="{{competition}}" />
+{% if include_fences %}
+<p>
+Fence: <select id='fence' name='fence'>
+    <option value="none"></option>
+    {% for fence in fences %}
+        <option value="{{fence}}">Fence {{fence}}</option>
+    {% endfor %}
+</select></p>
+{% else %}
+<input type="hidden" name="fence" value="0" />
+{% endif %}
+<p>{{help_text}}</p>
+{% if question %}
+	<input type="checkbox" id="question" name="question"/ ><label for="question">{{question}}</label>
+{% endif %}
+<table align="center">
+<thead>
+<td>Competitor Number</td>
+<td>{{value}}</td>
+</thead>
+{% for round in rounds %}
+<tr>
+	<td><input  type="text" name="round_number{{round}}" /></td>
+	<td><input  type="text" name="round_value{{round}}" value="{{default}}"/></td>
+</tr>
+{% endfor %}
+</table>
+</form>
+<button onclick="maybe_submit('{{include_fences}}')">Submit</button>
+</div>

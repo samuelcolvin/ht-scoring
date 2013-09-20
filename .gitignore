@@ -2,3 +2,6 @@
 *.pot
 *.pyc
 local_settings.py
+/HT Alpha Times 13.xlsx
+/secret_key
+/sqlite.db
