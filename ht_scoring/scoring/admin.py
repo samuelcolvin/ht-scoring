@@ -9,7 +9,7 @@ class RoundInline(admin.TabularInline):
 class CompetitorAdmin(admin.ModelAdmin):
 	inlines = [RoundInline]
 	list_per_page = 500
-	list_display = ('num_name', 'horse', 'group', 'total_rounds')
+	list_display = ('number', 'name', 'horse', 'group', 'total_rounds')
 	
 class CompetitionAdmin(admin.ModelAdmin):
 #	inlines = [RoundInline]
