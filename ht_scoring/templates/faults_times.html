@@ -1,5 +1,10 @@
 {% extends "sk_menu_page.html" %}
 
+{% block extra_css %}
+	{% load staticfiles %}
+	<link rel="stylesheet" href="{% static "styles.css" %}?">
+{% endblock %}
+
 {% block maincol_content %}
 <div class="col-xs-12 col-sm-9 centered">
 <div class="col-xs-8">

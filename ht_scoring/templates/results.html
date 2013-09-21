@@ -4,7 +4,7 @@
 	<div class="row">
 	<p><strong>{{fences}}</strong> Fences,</p>
 	<p><strong>{{entries}}</strong> Entries,</p>
-	<p>Optimum time <strong>{{optimum_time}}</strong></p>
+	<p>Optimum time: <strong>{{optimum_time}}</strong></p>
 	</div>
 	<div class="row">
 	<table align="center" class="table table-bordered">
@@ -15,8 +15,8 @@
 			<td>Horse</td>
 			<td>Pony Club</td>
 			<td>Faults</td>
-			<td>Time Error</td>
 			<td>Finishing Time</td>
+			<td>Time Error</td>
 		</thead>
 		{% for round in rounds %}
 		<tr>
@@ -24,10 +24,10 @@
 			<td>{{round.number}}</td>
 			<td>{{round.name}}</td>
 			<td>{{round.horse}}</td>
-			<td>{{round.pc}}</td>
+			<td>{{round.group}}</td>
 			<td>{{round.faults}}</td>
-			<td>{{round.time_diff}}</td>
 			<td>{{round.time}}</td>
+			<td>{{round.time_diff}}</td>
 		</tr>
 		{% endfor %}
 	</table>

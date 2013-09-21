@@ -5,50 +5,11 @@ table {
 
 table td {
 	border: 1px solid #444;
-	padding: 5px 10px;
+	padding: 5px 10px !important;
 }
 
-.completeness_table td {
-	padding: 1px 4px;
-}
-
-#content_narrow, #content_wide {
-	min-height: 600px;
-	background-color: white;
-	padding: 20px;
-}
-
-#content_narrow {
-	max-width: 800px;
-	margin: 30px auto;
-}
-
-#content_wide {
-	margin: 30px 50px;
-}
-
-.collection {
-	margin-bottom: 30px;
-	border-bottom: 1px solid #AAA;
-	padding-bottom: 10px;
-}
-
-.errors {
-	color: red;
-}
-
-.errors, .comments {
-	text-align: left;
-	padding-left: 50px;
-	padding-right: 50px;
-}
-
-.details {
-	font-size: 90%;
-}
-
-.details p {
-	margin: 0px;
+td input{
+	width: 100%;
 }
 
 .clear, .faults, .empty {
@@ -69,31 +30,4 @@ table td {
 
 .auto {
 	background-color: #ddd;
-}
-
-#redirect_msg {
-	height: 40px;
-	padding: 5px;
-}
-
-.no_top_bottom {
-	border-top: 0px;
-	border-bottom: 0px;
-	background-color: #fff;
-}
-
-@media print {
-	button {
-		display: none;
-	}
-	h1 {
-		margin-top: 0px;
-	}
-	button {
-		display: none;
-	}
-	#content_narrow, #content_wide {
-		padding-top: 0px :
-		margin: inherit;
-	}
 }

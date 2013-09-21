@@ -45,11 +45,11 @@ settings['fields']['number']=('J', get_number)
 settings['classes']=[]
 #settings['classes'].append({'name': 'Class 1A', 'op_time': 0, 'fences': 10, 'column': 'D'})
 settings['classes'].append({'name': 'Class 1 A&B', 'op_time': 0, 'fences': 10, 'column': 'D'})
-settings['classes'].append({'name': 'Class 2', 'op_time': 235.52, 'fences': 19, 'column': 'E'})
-settings['classes'].append({'name': 'Class 3', 'op_time': 235.52, 'fences': 19, 'column': 'F'})
-settings['classes'].append({'name': 'Class 4', 'op_time': 321.15, 'fences': 25, 'column': 'G'})
-settings['classes'].append({'name': 'Class 5', 'op_time': 321.15, 'fences': 25, 'column': 'H'})
-settings['classes'].append({'name': 'Class 6', 'op_time': 304.69, 'fences': 22, 'column': 'I'})
+settings['classes'].append({'name': 'Class 2', 'op_time': 0, 'fences': 10, 'column': 'E'})
+settings['classes'].append({'name': 'Class 3', 'op_time': 0, 'fences': 10, 'column': 'F'})
+settings['classes'].append({'name': 'Class 4', 'op_time': 0, 'fences': 10, 'column': 'G'})
+settings['classes'].append({'name': 'Class 5', 'op_time': 0, 'fences': 10, 'column': 'H'})
+settings['classes'].append({'name': 'Class 6', 'op_time': 0, 'fences': 10, 'column': 'I'})
 
 def print_line(row):
 	f=row['fields']

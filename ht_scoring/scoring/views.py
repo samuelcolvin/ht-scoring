@@ -6,6 +6,7 @@ from django import forms
 from django.forms.formsets import formset_factory
 from django.db import models
 import settings, traceback
+import HotDjango
 
 class ScoringBase(generic.TemplateView):
 	def scoring_base(self, generate_side_menu=True):
@@ -42,6 +43,10 @@ class ScoringBase(generic.TemplateView):
 		self._context['errors'] = []
 		self._comp_id = int(kw['comp'])
 		self._comp = m.Competition.objects.get(id=self._comp_id)
+		self._context['fences'] = str(self._comp.fences)
+		self._context['entries'] = str(self._comp.entries())
+		self._context['optimum_time'] = self._comp.optimum_time_str()
+		self._context['percent_complete'] = self._comp.complete_percent_str()
 	
 	def _calc_results(self):
 		rounds = m.Round.objects.filter(competition=self._comp).filter(not_competative=False).filter(time_finish__isnull=False)
@@ -62,6 +67,8 @@ class Index(ScoringBase):
 		self._context = super(Index, self).get_context_data(**kw)
 		self._context = super(Index, self).get_context_data(**kw)
 		self._context['title'] = settings.SITE_TITLE
+		table = HotDjango.get_all_apps()['ht_scoring__scoring']['Competition'].DjangoTable
+		self._context['table'] = table(m.Competition.objects.all())
 		self.scoring_base()
 		return self._context
 		
@@ -80,9 +87,6 @@ class CompletenessDisplay(ScoringBase):
 	def get_context_data(self, **kw):
 		self.page_loader(**kw)
 		self._context['competition_name'] = self._comp.name
-		self._context['fences'] = str(self._comp.fences)
-		self._context['entries'] = str(self._comp.entries())
-		self._context['optimum_time'] = self._comp.optimum_time_str()
 		self._context['fence_list'] = range(1, self._comp.fences + 1)
 		self._calc_results()
 		rounds = []
@@ -115,7 +119,7 @@ class CompletenessDisplay(ScoringBase):
 		return self._context
 	
 
-rows_per_page = 20
+rows_per_page = 15
 
 class FormsetForm(forms.Form):
 	competitor = forms.IntegerField()
@@ -312,10 +316,6 @@ class Results(ScoringBase):
 	
 	def get_context_data(self, **kw):
 		self.page_loader(**kw)
-
-		self._context['fences'] = str(self._comp.fences)
-		self._context['entries'] = str(self._comp.entries())
-		self._context['optimum_time'] = self._comp.optimum_time_str()
 		round_models = self._calc_results()
 		rounds = []
 		for r in round_models:

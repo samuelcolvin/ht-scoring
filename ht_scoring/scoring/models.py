@@ -49,6 +49,17 @@ class Competition(models.Model):
 	
 	def optimum_time_str(self):		
 		return float2time(self.optimum_time)
+	
+	def rounds_count(self):
+		return self.rounds.count()
+	
+	def complete_percent_str(self):
+		fences = Fence.objects.filter(round__competition=self).count()
+		rounds_with_times = Round.objects\
+			.filter(competition=self).filter(time_finish__isnull=False).count()
+		complete = float(fences + rounds_with_times)\
+			/float(self.rounds.count() * (self.fences+1))*100
+		return '%0.2f%%' % complete
 		
 	def __unicode__(self):
 		return self.name
