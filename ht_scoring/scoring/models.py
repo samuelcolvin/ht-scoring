@@ -51,7 +51,7 @@ class Competition(models.Model):
 		return float2time(self.optimum_time)
 		
 	def __unicode__(self):
-		return self.name + ', ' + str(self.entries()) + ' entries, ' + str(self.fences) + ' fences'
+		return self.name
 		
 	class Meta:
 		ordering = ['id']
@@ -85,10 +85,7 @@ class Competitor(models.Model):
 			return '-'
 		
 	def __unicode__(self):
-		group = ''
-		if self.group:
-			group = ' (' + self.group.name + ')'
-		return str(self.number) + ': ' + self.name() + ' on ' + self.horse + group + ', in ' + str(self.total_rounds()) + ' classes.'
+		return '%d %s' % (self.number, self.name())
 	
 	def num_name(self):
 		return 'no. ' + str(self.number) + ': ' + self.name()
@@ -100,22 +97,32 @@ class Round(models.Model):
 	competition = models.ForeignKey(Competition, related_name='rounds')
 	competitor = models.ForeignKey(Competitor, related_name='rounds')
 	not_competative = models.BooleanField()
-	time_start = models.FloatField(null=True, blank=True)
+	time_start = models.FloatField(default = 0)
 	time_finish = models.FloatField(null=True, blank=True)
+	time_diff = models.FloatField(null=True, blank=True)
+	time_diff.short_description = 'Time Difference from Optimum'
 	place = models.IntegerField(null=True, blank=True)
+	
+	def save(self, *args, **kw):
+		if not None in [self.time_finish, self.time_start, self.competition.optimum_time]:
+			self.time_diff = self.time_finish - self.time_start - self.competition.optimum_time
+		super(Round, self).save(*args, **kw)
+	
 	class Meta:
 		ordering = ['competitor']
+		
 	def time(self):
-		if self.time_start and self.time_finish:
+		if self.time_start != None and self.time_finish != None:
 			return self.time_finish - self.time_start
 		else:
 			return None
 	
-	def faults(self):
-		faults = 0
-		for f in self.fences.all():
-			faults += f.faults
-		return faults
+	def get_faults(self):
+		faults = self.fences.aggregate(total_faults = models.Sum('faults'))['total_faults']
+		if faults is None:
+			return 0
+		else:
+			return faults
 		
 	def eliminated(self):
 		for f in self.fences.all():
@@ -129,7 +136,7 @@ class Round(models.Model):
 		if self.eliminated():
 			return 'E'
 		else:
-			return '%d' % self.faults()
+			return '%d' % self.get_faults()
 	
 	def time_start_str(self):
 		return float2time(self.time_start)
@@ -141,49 +148,21 @@ class Round(models.Model):
 			
 	def time_str(self):
 		return float2time(self.time())
-		
-	def time_diff(self):
-		if self.time() and isinstance(self.competition.optimum_time, float):
-			diff = self.time() - self.competition.optimum_time
-			return diff
-		else:
-			return unknown
-	time_diff.short_description = 'Time Difference from Optimum'
 			
 	def time_diff_str(self):
-		return float2time(self.time_diff())
+		return float2time(self.time_diff)
 	time_diff_str.short_description = 'Time Difference from Optimum'
 	
-	def competitor_num_name(self):
-		return self.competitor.num_name()
-	competitor_num_name.short_description = 'Competitor'
-	
-	def competition_name(self):
-		return self.competition.name
-	competition_name.short_description = 'Competition'
-	
 	def __unicode__(self):
-		base = 'no. ' + str(self.competitor.number) + ': ' + self.competitor.name() + ', ' + self.competition.name
-		result = '| '
-		if self.faults:
-			result += 'faults: ' + str(self.faults())
-		if self.time():
-			result += 'time: %0.2fs' % self.time()
-		
-		if self.not_competative:
-			return base + ', HC ' + result
-		if self.eliminated():
-			return base + ', Eliminated ' + result
-		else:
-			return base + result
+		return '%s in %s' % (self.competitor, self.competition.name)
 	
 		
 class Fence(models.Model):
 	number = models.IntegerField()
-	faults = models.IntegerField()
-	eliminated = models.BooleanField()
+	faults = models.IntegerField(default=0)
+	eliminated = models.BooleanField(default = False)
 	auto_completed = models.BooleanField(default = False)
-	round = models.ForeignKey(Round, related_name="fences")
+	round = models.ForeignKey(Round, related_name='fences')
 	
 	def full_name(self):
 		return 'Fence %d' % self.number
@@ -192,6 +171,8 @@ class Fence(models.Model):
 	def faults_string(self):
 		if self.eliminated:
 			return 'E'
+		if self.faults == 0 and self.auto_completed:
+			return ''
 		else:
 			return '%d' % self.faults
 	

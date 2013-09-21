@@ -20,7 +20,8 @@ class FenceInline(admin.TabularInline):
 	extra = 1
 	
 class FenceAdmin(admin.ModelAdmin):
-	list_display = ('full_name', 'competition', 'faults', 'eliminated', 'round')
+	list_display = ('full_name', 'competition', 'auto_completed', 'faults', 'eliminated', 'round')
+	list_filter = ['round__competition','number', 'auto_completed']
 	list_per_page = 500
 
 def set_time_start_zero(modeladmin, request, queryset):
@@ -33,7 +34,7 @@ class RoundAdmin(admin.ModelAdmin):
 	list_per_page = 500
 	list_filter = ['competition']
 	actions=[set_time_start_zero]
-	list_display = ('competitor_num_name', 'competition_name', 'place', 'faults_string', 'time_start_str', 'time_finish_str',  'time_diff_str')
+	list_display = ('competitor', 'competition', 'place', 'faults_string', 'time_start_str', 'time_finish_str',  'time_diff_str')
 	
 admin.site.register(Group)
 admin.site.register(Competition, CompetitionAdmin)

@@ -64,11 +64,11 @@ table td {
 }
 
 .empty {
-	background-color: #aaa;
+	background-color: #bbb;
 }
 
 .auto {
-	background-color: #ccc;
+	background-color: #ddd;
 }
 
 #redirect_msg {

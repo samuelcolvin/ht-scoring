@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import sys, os
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ht_scoring.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 from ht_scoring.scoring.models import Competition, Round, Competitor, Group
 from django.utils.encoding import smart_str
 import openpyxl

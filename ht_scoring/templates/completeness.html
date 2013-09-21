@@ -21,7 +21,7 @@
 		<td class="no_top_bottom"></td>
 		<td>Time Start</td>
 		<td>Time Finish</td>
-		<td>Time</td>
+		<td>Time Taken</td>
 		<td>Time Error</td>
 		<td>Total</td>
 		<td>Place</td>
@@ -29,11 +29,11 @@
 		{% for round in rounds %}
 		<tr>
 			<td>{{round.competitor}}</td>
-		{% for fence_no, fence in round.fences.items %}
-			<td class="{{fence.state}}">
-				{{fence.faults}}
-			</td>
-		{% endfor %}
+			{% for fence_no, fence in round.fences.items %}
+				<td class="{{fence.state}}">
+					{{fence.faults}}
+				</td>
+			{% endfor %}
 			<td class="no_top_bottom"></td>
 			<td class="{% if round.time_start == '' %}empty{% else %}clear{% endif %}">
 				{{round.time_start}}

@@ -1,14 +1,11 @@
-from django.template import RequestContext, Context, loader
 import ht_scoring.scoring.models as m
-from django.http import HttpResponse
-import ht_scoring.scoring.add_results as add_results
 from django.core.urlresolvers import reverse
 import SkeletalDisplay.views as views
 import django.views.generic as generic
-import django.views.generic.edit as generic_edit
 from django import forms
 from django.forms.formsets import formset_factory
-import settings
+from django.db import models
+import settings, traceback
 
 class ScoringBase(generic.TemplateView):
 	def scoring_base(self, generate_side_menu=True):
@@ -17,7 +14,6 @@ class ScoringBase(generic.TemplateView):
 			side_menu = self.side_menu()
 		self.page_buttons()
 		self._context.update(views.base_context(self.request, side_menu))
-	
 	
 	def side_menu(self):
 		side_menu = []
@@ -34,14 +30,30 @@ class ScoringBase(generic.TemplateView):
 	def page_buttons(self):
 		if hasattr(self, '_comp_id'):
 			buttons = [{'url': reverse('comp_display', kwargs={'comp': self._comp_id}), 'name': 'Summary'},
+					{'url': reverse('faults', kwargs={'comp': self._comp_id}), 'name': 'Enter Faults'},
+					{'url': reverse('times', kwargs={'comp': self._comp_id}), 'name': 'Enter Times'},
 					{'url': reverse('completeness', kwargs={'comp': self._comp_id}), 'name': 'Completeness'},
-					{'url': reverse('faults', kwargs={'comp': self._comp_id}), 'name': 'Enter Faults'}]
+					{'url': reverse('results', kwargs={'comp': self._comp_id}), 'name': 'Results'}]
 			self._context['page_menu'] = buttons
 			
 	def page_loader(self, **kw):
 		self._context = super(ScoringBase, self).get_context_data(**kw)
+		self._context['info'] = []
+		self._context['errors'] = []
 		self._comp_id = int(kw['comp'])
 		self._comp = m.Competition.objects.get(id=self._comp_id)
+	
+	def _calc_results(self):
+		rounds = m.Round.objects.filter(competition=self._comp).filter(not_competative=False).filter(time_finish__isnull=False)
+		rounds = rounds.annotate(faults=models.Sum('fences__faults'))
+		rounds = rounds.extra(select={'abs_time_diff':'ABS(time_diff)'})
+		rounds = rounds.extra(order_by = ['fences__eliminated', 'faults', 'abs_time_diff'])
+		place = 1
+		for r in rounds:
+			r.place=place
+			r.save()
+			place += 1
+		return rounds
 
 class Index(ScoringBase):
 	template_name = 'index.html'
@@ -53,7 +65,6 @@ class Index(ScoringBase):
 		self.scoring_base()
 		return self._context
 		
-
 class CompetitionDisplay(ScoringBase):
 	template_name = 'competition.html'
 	
@@ -73,16 +84,17 @@ class CompletenessDisplay(ScoringBase):
 		self._context['entries'] = str(self._comp.entries())
 		self._context['optimum_time'] = self._comp.optimum_time_str()
 		self._context['fence_list'] = range(1, self._comp.fences + 1)
-		rounds_raw = add_results.status_list(self._comp)
+		self._calc_results()
 		rounds = []
-		for rr in rounds_raw:
-			the_round = {'competitor': rr.competitor.number}
+		for r in m.Round.objects.filter(competition=self._comp):
+			the_round = {'competitor': r.competitor.number}
 			the_round['fences'] = {}
 			for fn in self._context['fence_list']:
 				the_round['fences'][fn] = {'state': 'empty', 'faults': ''}
-				if m.Fence.objects.filter(number=fn, round=rr) and rr.time_start:
-					the_fence = m.Fence.objects.get(number=fn, round=rr)
-					the_round['fences'][fn] = {'faults': the_fence.faults_string()}
+				fences = m.Fence.objects.filter(number=fn, round=r)
+				if fences.exists():
+					the_fence = fences[0]
+					the_round['fences'][fn]['faults'] = the_fence.faults_string()
 					if the_fence.auto_completed:
 						the_round['fences'][fn]['state'] = 'auto'
 					else:
@@ -90,12 +102,12 @@ class CompletenessDisplay(ScoringBase):
 							the_round['fences'][fn]['state'] = 'clear'
 						else:
 							the_round['fences'][fn]['state'] = 'faults'
-			the_round['time_start'] = rr.time_start_str()
-			the_round['time_finish'] = rr.time_finish_str()
-			the_round['time'] = rr.time_str()
-			the_round['time_diff'] = rr.time_diff_str()
-			the_round['status'] = rr.faults_string();
-			the_round['place'] = (str(rr.place), '')[rr.place is None];
+			the_round['time_start'] = r.time_start_str()
+			the_round['time_finish'] = r.time_finish_str()
+			the_round['time'] = r.time_str()
+			the_round['time_diff'] = r.time_diff_str()
+			the_round['status'] = r.faults_string();
+			the_round['place'] = (r.place, '')[r.place is None];
 			rounds.append(the_round)
 		self._context['rounds'] = rounds
 		self._context['title'] = self._comp.name
@@ -105,23 +117,12 @@ class CompletenessDisplay(ScoringBase):
 
 rows_per_page = 20
 
-class FaultsForm(forms.Form):
+class FormsetForm(forms.Form):
 	competitor = forms.IntegerField()
-	faults = forms.CharField(max_length=10)
-	faults.initial = 0
-	
-class FaultsFormHeader(forms.Form):
-	mark_complete = forms.BooleanField(required=False, label = 'Mark Fence Complete')
-	fence = forms.ChoiceField(label = 'Fence')
-	
-	def __init__(self, *args, **kwargs):
-		fences = kwargs.pop('fences', 0)
-		super(FaultsFormHeader, self).__init__(*args, **kwargs)
-		c = [(i, 'Fence %d' % i) for i in range(1, fences + 1)]
-		self.fields['fence'].choices = c
-			
+	input_value = forms.CharField(max_length=10)
+	input_value.initial = 0
 
-class Faults(ScoringBase):
+class FillInForm(ScoringBase):
 	template_name = 'faults_times.html'
 	
 	def get(self, request, *args, **kw):
@@ -132,9 +133,77 @@ class Faults(ScoringBase):
 	
 	def post(self, request, *args, **kw):
 		self.page_loader(**kw)
-		self.process_forms(request)
+		self.full_form(request)
 		context = self.get_context_data(**kw)
 		return self.render_to_response(context)
+	
+	def full_form(self, request):
+		self._header_form = self.header_form_cls(request.POST, fences = self._comp.fences)
+		self._formset = formset_factory(self.formset_cls)(request.POST)
+		if self._header_form.is_valid() and self._formset.is_valid():
+			if self.process_forms():
+				self.empty_form()
+		else:
+			self._context['errors'].append('Problem Submitting form')
+		
+	def empty_form(self):
+		self._header_form = self.header_form_cls(fences = self._comp.fences)
+		self._formset = formset_factory(self.formset_cls, extra=rows_per_page, max_num=rows_per_page)()
+		
+	def process_forms(self):
+		clear = True
+		try:
+			if not self.process_header():
+				clear = False
+			else:
+				for row in self._formset.cleaned_data:
+					if 'competitor' in row:
+						competitor_number = row['competitor']
+						try:
+							c_round = m.Round.objects.get(competition=self._comp, competitor__number=competitor_number)
+						except m.Round.DoesNotExist:
+							competitors = m.Competitor.objects.filter(number=competitor_number)
+							if competitors.exists():
+								self._context['errors'].append('%s not entered in %s, faults not recorded'\
+															 % (competitors[0], self._comp.name))
+							else:
+								self._context['errors'].append('No competitor with number: %d' % competitor_number)
+							clear = False
+							continue
+						if not self.process_row(row, c_round):
+							clear = False
+		except Exception, e:
+			self._context['errors'].append('Problem Processing form:')
+			self._context['errors'].append(str(e))
+			if hasattr(e, 'detail'):
+				self._context['errors'].append(e.detail)
+			print e
+			traceback.print_exc()
+			clear = False
+		else:
+			self._context['info'].append('Data updated Successfully')
+		return clear
+	
+class FaultsFormHeader(forms.Form):
+	mark_complete = forms.BooleanField(required=False, label = 'Mark Fence Complete')
+	fence = forms.ChoiceField(label = 'Fence')
+	
+	def __init__(self, *args, **kwargs):
+		fences = kwargs.pop('fences', 0)
+		super(FaultsFormHeader, self).__init__(*args, **kwargs)
+		c = [(i, 'Fence %d' % i) for i in range(1, fences + 1)]
+		self.fields['fence'].choices = c
+	
+class FaultsFormsetForm(FormsetForm):
+	def __init__(self, *args, **kwargs):
+		super(FaultsFormsetForm, self).__init__(*args, **kwargs)
+		self.fields['input_value'].label = 'Faults'
+
+class Faults(FillInForm):
+	def __init__(self, *args, **kw):
+		self.header_form_cls = FaultsFormHeader
+		self.formset_cls = FaultsFormsetForm
+		super(Faults, self).__init__(*args, **kw)
 		
 	def get_context_data(self, **kw):
 		self._context['form_header'] = self._header_form
@@ -144,180 +213,123 @@ class Faults(ScoringBase):
 		self.scoring_base()
 		return self._context
 	
-	def process_forms(self, request):
-		print request.POST
-		self._header_form = FaultsFormHeader(request.POST, fences = self._comp.fences)
-		self._formset = formset_factory(FaultsForm)(request.POST)
-# 		import pdb; pdb.set_trace()
-		if self._header_form.is_valid() and self._formset.is_valid():
-			print 'ADD FAULTS'
-			self.empty_form()
+	def process_header(self):
+		self._fence_number = int(self._header_form.cleaned_data['fence'])
+		if self._header_form.cleaned_data['mark_complete']:
+			all_rounds = m.Round.objects.filter(competition=self._comp).exclude(fences__number=self._fence_number)
+			fences = [m.Fence(number=self._fence_number, round=r, auto_completed=True) for r in all_rounds]
+			m.Fence.objects.bulk_create(fences)
+		return True
+	
+	def process_row(self, row, c_round):
+		if row['input_value'].lower() == 'e':
+			eliminated = True
+			faults = 60
 		else:
-			print 'INVALID'
+			try:
+				faults = int(row['input_value'])
+			except ValueError:
+				self._context['errors'].append('%s could not be understood' % row['input_value'])
+				return False
+			eliminated = False
+		fences = m.Fence.objects.filter(number=self._fence_number, round=c_round)
+		if fences.exists():
+			fence=fences[0]
+			if not fence.auto_completed:
+				self._context['info'].append('Fence already exists for %s: Fence %d, updating faults' % (c_round, self._fence_number))
+			fence.auto_completed = False
+		else:
+			fence = m.Fence(number=self._fence_number, round=c_round)
+		fence.faults = faults
+		fence.eliminated = eliminated
+		fence.save()
+		return True
+
+	
+class TimesFormHeader(forms.Form):
+	choices=[('time_start', 'Start Times'), ('time_finish', 'Finish Times')]
+	time_choice = forms.ChoiceField(label = 'Start or End Time', choices = choices)
+	
+	def __init__(self, *args, **kwargs):
+		kwargs.pop('fences', 0)
+		super(TimesFormHeader, self).__init__(*args, **kwargs)
+	
+class TimesFormsetForm(FormsetForm):
+	def __init__(self, *args, **kwargs):
+		super(TimesFormsetForm, self).__init__(*args, **kwargs)
+		self.fields['input_value'].label = 'Times'
 		
-	def empty_form(self):
-		self._header_form = FaultsFormHeader(fences = self._comp.fences)
-		self._formset = formset_factory(FaultsForm, extra = 10)()
+class Times(FillInForm):
+	def __init__(self, *args, **kw):
+		self.header_form_cls = TimesFormHeader
+		self.formset_cls = TimesFormsetForm
+		super(Times, self).__init__(*args, **kw)
+		
+	def get_context_data(self, **kw):
+		self._context['form_header'] = self._header_form
+		self._context['formset'] = self._formset
+		self._context['help_text'] = 'time format: [hours][+][mins][+][seconds] (delimiter space, + or :)  eg. 1+45+17.4, or 105+17.4, or just 6317.4.'
+		self._context['title'] = self._comp.name + ': Enter Times'
+		self.scoring_base()
+		return self._context
 	
-def faults_submit(request):
-	mark_complete = False
-	if request.POST.get('question', False):
-		mark_complete = True
-	add_faults = add_results.AddFaults(mark_complete)
-	return process_table_form(request, add_faults, 'Faults Submitted')
+	def process_header(self):
+		self._time_choice = self._header_form.cleaned_data['time_choice']
+		return True
 	
-def times(request):
-	t = loader.get_template('faults_times.html')
-	comp_id = int(request.GET[u'competition'])
-	comp = Competition.objects.get(id=comp_id)
-	fences = range(1, comp.fences + 1)
-	rows = range(1, rows_per_page + 1)
-	cont_d = {'competition': str(comp_id)}
-	self._context['competition_name'] = comp.name
-	self._context['value'] = ''
-	self._context['include_fences'] = False
-	self._context['help_text'] = 'time format: [hours][+][mins][+][seconds] (delimiter space, + or :)  eg. 1+45+17.4, or 105+17.4, or just 6317.4.'
-	self._context['default'] = ''
-	self._context['fences'] = fences
-	self._context['rounds'] = rows
-	c = Context(cont_d)
-	return (c, t)
+	def process_row(self, row, c_round):
+		try:
+			time = self._parser(row['input_value'].lower())
+		except Exception:
+			self._context['errors'].append('error processing time: %s' % row['input_value'])
+			return False
+		setattr(c_round, self._time_choice, time)
+		c_round.save()
+		return True
 	
-def times_start(request):
-	(c, t) = times(request)
-	title = 'Enter Starting Times'
-	return base(request, title, t.render(c))
-	
-def times_start_submit(request):
-	add_times = add_results.AddTimes('start')
-	return process_table_form(request, add_times, 'Start Times Submitted')
-	
-def times_finish(request):
-	(c, t) = times(request)
-	title = 'Enter Finishing Times'
-	return base(request, title, t.render(c))
-	
-def times_finish_submit(request):
-	add_times = add_results.AddTimes('finish')
-	return process_table_form(request, add_times, 'Finish Times Submitted')
+	def _parser(self, t):
+		delims = [':', ' ', '+']
+		delim = None
+		for i in t:
+			if i in delims:
+				delim = i
+				continue
+		if delim is not None:
+			ts = t.split(delim)
+			secs = 0
+			if t.count(delim) > 1:
+				h = int(ts.pop(0))
+				secs = h * 3600
+			secs += int(ts.pop(0)) * 60
+			secs += float(ts.pop(0))
+			return secs
+		else:
+			secs = float(t)
+			return secs
 
-def status(request):
-	t = loader.get_template('completeness.html')
-	comp_id = int(request.GET[u'competition'])
-	comp = Competition.objects.get(id=comp_id)
-	cont_d = {'competition_name': comp.name}
-	self._context['fences'] = str(comp.fences)
-	self._context['entries'] = str(comp.entries())
-	self._context['optimum_time'] = comp.optimum_time_str()
-	self._context['fence_list'] = range(1, comp.fences + 1)
-	rounds_raw = add_results.status_list(comp)
-	rounds = []
-	for rr in rounds_raw:
-		the_round = {'competitor': rr.competitor.number}
-		the_round['fences'] = {}
-		for fn in self._context['fence_list']:
-			the_round['fences'][fn] = {'state': 'empty', 'faults': ''}
-			if Fence.objects.filter(number=fn, round=rr) and rr.time_start:
-				the_fence = Fence.objects.get(number=fn, round=rr)
-				the_round['fences'][fn] = {'faults': the_fence.faults_string()}
-				if the_fence.auto_completed:
-					the_round['fences'][fn]['state'] = 'auto'
-				else:
-					if the_fence.faults == 0:
-						the_round['fences'][fn]['state'] = 'clear'
-					else:
-						the_round['fences'][fn]['state'] = 'faults'
-		the_round['time_start'] = rr.time_start_str()
-		the_round['time_finish'] = rr.time_finish_str()
-		the_round['time'] = rr.time_str()
-		the_round['time_diff'] = rr.time_diff_str()
-		the_round['status'] = rr.faults_string();
-		the_round['place'] = (str(rr.place), '')[rr.place is None];
-		rounds.append(the_round)
-	self._context['rounds'] = rounds
-	title = 'Status'
-	c = Context(cont_d)
-	return base(request, title, t.render(c), wide=True)
+class Results(ScoringBase):
+	template_name = 'results.html'
 	
-def status_submit(request):
-	pass
+	def get_context_data(self, **kw):
+		self.page_loader(**kw)
 
-show_results_to=6
-
-def results(request):
-	t = loader.get_template('results.html')
-	comp_id = int(request.GET[u'competition'])
-	comp = Competition.objects.get(id=comp_id)
-	cont_d = {'competition_name': comp.name}
-	self._context['fences'] = str(comp.fences)
-	self._context['entries'] = str(comp.entries())
-	self._context['optimum_time'] = comp.optimum_time_str()
-	rounds_raw = add_results.calc_results(comp_id)
-	rounds = []
-	for r in rounds_raw:
-#		if r.place > show_results_to:
-#			break
-		the_round = {}
-		the_round['place'] = str(r.place)
-		the_round['number'] = str(r.competitor.number)
-		the_round['name'] = r.competitor.name()
-		the_round['horse'] = r.competitor.horse
-		the_round['pc'] = r.competitor.get_group()
-		the_round['faults'] = r.faults_string()
-		the_round['time_diff'] = r.time_diff_str()
-		the_round['time'] = r.time_str()
-		rounds.append(the_round)
-	self._context['rounds'] = rounds
-	title = 'Results'
-	c = Context(cont_d)
-	return base(request, title, t.render(c))
-	
-	
-def results_submit(request):
-	pass
-
-def base(request, title, content, wide=False):
-	t = loader.get_template('sbase.html')
-	cont_d = {'title': title, 'content': content, 'width': 'narrow'}
-	if wide:
-		self._context['width'] = 'wide'
-	c = RequestContext(request, cont_d)
-	return HttpResponse(t.render(c))
-	
-def process_table_form(request, process, title):
-	errors = []
-	comments = []
-	comments.append('processing table...')
-	t = loader.get_template('submit.html')
-	form = request.POST
-	comp_id = int(form['competition'])
-	fence_number = int(form['fence'])
-	rows = range(1, rows_per_page + 1)
-	table_data = {}
-	for r in rows:
-		number = form['round_number' + str(r)]
-		if number != '':
-			try:
-				number = int(number)
-			except ValueError:
-				errors.append('Conversion error on number \'%s\', row ignored.' % number)
-			else:
-				value = form['round_value' + str(r)]
-				table_data[number] = value
-	competition = Competition.objects.get(id=comp_id)
-	table2 = {}
-	if len(table_data) > 0:
-		for row in table_data:
-			try:
-				value = process.parser(table_data[row])
-			except ValueError:
-				errors.append('Conversion error on number %d value \'%s\', row ignored.' % (row, table_data[row]))
-			else:
-				table2[row] = value
-		comments.append('%d rows being processed...' % len(table2))
-		comments.append('fence %d, competition \'%s\'' % (fence_number, competition.name))
-#	else:
-#		comments.append('Nothing to do.')
-	process.process(competition.id, fence_number, table2, errors, comments)
-	c = Context({'errors': errors, 'comments' : comments})
-	return base(request, title, t.render(c))
+		self._context['fences'] = str(self._comp.fences)
+		self._context['entries'] = str(self._comp.entries())
+		self._context['optimum_time'] = self._comp.optimum_time_str()
+		round_models = self._calc_results()
+		rounds = []
+		for r in round_models:
+			the_round = {}
+			the_round['place'] = str(r.place)
+			the_round['number'] = str(r.competitor.number)
+			the_round['name'] = r.competitor.name()
+			the_round['horse'] = r.competitor.horse
+			the_round['group'] = r.competitor.get_group()
+			the_round['faults'] = r.faults_string()
+			the_round['time_diff'] = r.time_diff_str()
+			the_round['time'] = r.time_str()
+			rounds.append(the_round)
+		self._context['rounds'] = rounds
+		self._context['title'] = self._comp.name + ' Results'
+		self.scoring_base()
+		return self._context

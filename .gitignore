@@ -1,7 +1,7 @@
 *.log
 *.pot
 *.pyc
+*.db
 local_settings.py
-/HT Alpha Times 13.xlsx
-/sqlite.db
-/*.project
+*.xlsx
+*.project

@@ -1,34 +1,35 @@
-<h2>{{competition_name}}</h2>
-<a href="/"><button>Home</button></a>
-<button onclick="history.back()">Back</button>
-<div class="collection details" align="left">
-<p><strong>{{fences}}</strong> Fences,</p>
-<p><strong>{{entries}}</strong> Entries,</p>
-<p>Optimum time <strong>{{optimum_time}}</strong>.</p>
-</div>
-<div class="collection">
-<table align="center">
-	<thead>
-		<td>Place</td>
-		<td>Number</td>
-		<td>Name</td>
-		<td>Horse</td>
-		<td>Pony Club</td>
-		<td>Faults</td>
-		<td>Time Error</td>
-		<td>Finishing Time</td>
-	</thead>
-	{% for round in rounds %}
-	<tr>
-		<td>{{round.place}}</td>
-		<td>{{round.number}}</td>
-		<td>{{round.name}}</td>
-		<td>{{round.horse}}</td>
-		<td>{{round.pc}}</td>
-		<td>{{round.faults}}</td>
-		<td>{{round.time_diff}}</td>
-		<td>{{round.time}}</td>
-	</tr>
-	{% endfor %}
-</table>
-</div>
+{% extends "sk_menu_page.html" %}
+
+{% block maincol_content %}
+	<div class="row">
+	<p><strong>{{fences}}</strong> Fences,</p>
+	<p><strong>{{entries}}</strong> Entries,</p>
+	<p>Optimum time <strong>{{optimum_time}}</strong></p>
+	</div>
+	<div class="row">
+	<table align="center" class="table table-bordered">
+		<thead>
+			<td>Place</td>
+			<td>Number</td>
+			<td>Name</td>
+			<td>Horse</td>
+			<td>Pony Club</td>
+			<td>Faults</td>
+			<td>Time Error</td>
+			<td>Finishing Time</td>
+		</thead>
+		{% for round in rounds %}
+		<tr>
+			<td>{{round.place}}</td>
+			<td>{{round.number}}</td>
+			<td>{{round.name}}</td>
+			<td>{{round.horse}}</td>
+			<td>{{round.pc}}</td>
+			<td>{{round.faults}}</td>
+			<td>{{round.time_diff}}</td>
+			<td>{{round.time}}</td>
+		</tr>
+		{% endfor %}
+	</table>
+	</div>
+{% endblock maincol_content %}
