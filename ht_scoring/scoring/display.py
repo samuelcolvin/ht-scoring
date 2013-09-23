@@ -8,7 +8,6 @@ class Competitor(SkeletalDisplay.ModelDisplay):
     model = m.Competitor
     attached_tables = [{'name':'Round', 'populate':'rounds', 'title':'Rounds'}]
     index = 0
-    hot_table_dft_field = 'first_name'
     
     class DjangoTable(tables.Table):
         number = tables.LinkColumn('display_item', args=['ht_scoring__scoring', 'Competitor', A('pk')])
@@ -39,6 +38,11 @@ class Competition(SkeletalDisplay.ModelDisplay):
         class Meta(SkeletalDisplay.ModelDisplayMeta):
             pass
     
+    class Table2(DjangoTable):
+        name = tables.Column()
+        class Meta(SkeletalDisplay.ModelDisplayMeta):
+            pass
+    
     class HotTable(HotDjango.ModelSerialiser):
         class Meta:
             fields = ('id', 'name', 'fences')
@@ -61,7 +65,7 @@ class Round(SkeletalDisplay.ModelDisplay):
     
     class HotTable(HotDjango.ModelSerialiser):
         competition = HotDjango.IDNameSerialiser(m.Competition)
-        competitor = HotDjango.IDNameSerialiser(m.Competitor, lookup_field=Competitor.hot_table_dft_field)
+        competitor = HotDjango.IDNameSerialiser(m.Competitor)
         class Meta:
             fields = ('id', 'competition', 'competitor', 'not_competative', 
                       'time_start', 'time_finish', 'time_diff', 'place')

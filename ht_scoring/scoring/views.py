@@ -51,8 +51,9 @@ class ScoringBase(generic.TemplateView):
 	def _calc_results(self):
 		rounds = m.Round.objects.filter(competition=self._comp).filter(not_competative=False).filter(time_finish__isnull=False)
 		rounds = rounds.annotate(faults=models.Sum('fences__faults'))
+		rounds = rounds.annotate(eliminated_all=models.Sum('fences__eliminated'))
 		rounds = rounds.extra(select={'abs_time_diff':'ABS(time_diff)'})
-		rounds = rounds.extra(order_by = ['fences__eliminated', 'faults', 'abs_time_diff'])
+		rounds = rounds.extra(order_by = ['eliminated_all', 'faults', 'abs_time_diff'])
 		place = 1
 		for r in rounds:
 			r.place=place
@@ -67,7 +68,7 @@ class Index(ScoringBase):
 		self._context = super(Index, self).get_context_data(**kw)
 		self._context = super(Index, self).get_context_data(**kw)
 		self._context['title'] = settings.SITE_TITLE
-		table = HotDjango.get_all_apps()['ht_scoring__scoring']['Competition'].DjangoTable
+		table = HotDjango.get_all_apps()['ht_scoring__scoring']['Competition'].Table2
 		self._context['table'] = table(m.Competition.objects.all())
 		self.scoring_base()
 		return self._context
@@ -186,6 +187,8 @@ class FillInForm(ScoringBase):
 			clear = False
 		else:
 			self._context['info'].append('Data updated Successfully')
+			if hasattr(self, '_fence_number'):
+				self._context['info'].append('Fence %d' % self._fence_number)
 		return clear
 	
 class FaultsFormHeader(forms.Form):
